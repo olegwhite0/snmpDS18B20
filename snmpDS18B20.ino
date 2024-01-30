@@ -127,15 +127,16 @@ void loop() {
 //--------------------------------------------------------------------------------
 //                   отладочный вывод результата                                 +
 //--------------------------------------------------------------------------------
-      Serial.print("Принят пакет: ");Serial.print("Размер ");Serial.print(reqPDU.pdu_payload_len);Serial.print(" community: ");
-      for(int i=0; i<reqPDU.size_of_community; i++){Serial.print(reqPDU.community[i],HEX);Serial.print(" ");}
-      Serial.print(" request-id: ");
-      for(int i=0; i<reqPDU.size_of_request_id; i++){Serial.print(reqPDU.request_id[i],HEX);Serial.print(" ");}
-      Serial.print(" OID: ");
-      for(int i=0; i<reqPDU.size_of_oid; i++){Serial.print(reqPDU.oid[i],HEX);Serial.print(" ");}
-      Serial.println();
+     // Serial.print("Принят пакет: ");Serial.print("Размер ");Serial.print(reqPDU.pdu_payload_len);Serial.print(" community: ");
+     // for(int i=0; i<reqPDU.size_of_community; i++){Serial.print(reqPDU.community[i],HEX);Serial.print(" ");}
+     // Serial.print(" request-id: ");
+     // for(int i=0; i<reqPDU.size_of_request_id; i++){Serial.print(reqPDU.request_id[i],HEX);Serial.print(" ");}
+     // Serial.print(" OID: ");
+     // for(int i=0; i<reqPDU.size_of_oid; i++){Serial.print(reqPDU.oid[i],HEX);Serial.print(" ");}
+     // Serial.println();
       }
-      while ((size = udp.available())>0);
+      
+    while ((size = udp.available())>0);
 
     udp.flush();//эта функция должна ждать пока данные появятся в буфере
 
