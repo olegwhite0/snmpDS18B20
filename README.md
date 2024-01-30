@@ -21,6 +21,7 @@ Used oids:
 * 1.3.6.1.2.1.1.3.0 Timetick shows uptime
 * 1.3.6.1.2.1.1.5.0 = White-DS2SNMP description
 * 1.3.6.1.4.1.49701.1.1.0 = -99.99 six bytes string temperature output from the sensor
+
 No SNMPWALK no SNMPGETNEXT only SNMPGET
 
 This code does not contain a high programming style. it's just code.
