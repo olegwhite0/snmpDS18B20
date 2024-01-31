@@ -2,20 +2,27 @@
 #include <DallasTemperature.h>
 #include <UIPEthernet.h>
 
-#define ONE_WIRE_BUS 6 //Тут нужно написать ногу на которй висит DS18b20
-
-// отдает оиды
-//1.3.6.1.2.1.1.1.0 sysName
-//1.3.6.1.2.1.1.3.0 Uptime
-//1.3.6.1.2.1.1.5.0 sysDescription
-//1.3.6.1.4.1.49701.1.1.0 Temperature in celsius
-
-const byte sysDesc[]={'W','h','i','t','e','-','D','S','2','S','N','M','P'};//1.3.6.1.2.1.1.1.0: "White-DS2SNMP"
-const byte sysName[]={'W','h','i','t','e','-','D','S','2','S','N','M','P'};//1.3.6.1.2.1.1.1.0: "White-DS2SNMP"
-
-const byte community[]={'p','u','b','l','i','c'};//1.3.6.1.2.1.1.1.0: "White-DS2SNMP"
-// Кодировка оида замороченная, поэтому я просто вписал данные с wireshark
-unsigned long tick;//1.3.6.1.2.1.1.3.0: 42000
+//--------------------------------------------------------------------------------
+//              Инициализация основных переменных              +
+//--------------------------------------------------------------------------------
+//Тут нужно написать ногу на которй висит DS18b20
+#define ONE_WIRE_BUS 6 
+// настройки сетевой карты 
+uint8_t mac[6] = {0xde,0xad,0xbe,0xef,0xfe,0xed};
+IPAddress ip(10,222,128,251);
+// оиды в HEX , их можно узнать из wireshark
+const byte sysDesc_OID[]  = {0x2b,0x06,0x01,0x02,0x01,0x01,0x01,0x00};//1.3.6.1.2.1.1.1.0 sysName
+const byte sysUptime_OID[]= {0x2b,0x06,0x01,0x02,0x01,0x01,0x03,0x00};//1.3.6.1.2.1.1.3.0 Uptime
+const byte sysName_OID[]  = {0x2b,0x06,0x01,0x02,0x01,0x01,0x05,0x00};//1.3.6.1.2.1.1.5.0 sysDescription
+const byte sysTempC_OID[] = {0x2b,0x06,0x01,0x04,0x01,0x83,0x84,0x25,0x01,0x01,0x00};//1.3.6.1.4.1.49701.1.1.0 Temperature in celsius
+// Значения оидов 
+const byte sysDesc[]={'W','h','i','t','e','-','D','S','2','S','N','M','P'};
+const byte sysName[]={'W','h','i','t','e','-','D','S','2','S','N','M','P'};
+// Значение коммюнити
+const byte community[]={'p','u','b','l','i','c'};
+// Переменная аптайм в десятичной системе
+unsigned long tick;//1.3.6.1.2.1.1.3.0
+// Переменная аптайм в шеснадцатеричной
 byte tickHEX[4] = {0x00,0x00,0x00,0x00};//Это значение аптайма в варианте 4 байтов
 
 //--------------------------------------------------------------------------------
@@ -65,7 +72,9 @@ unsigned long timing=0;
    // makes it async
   sensors.requestTemperatures();
 }
-
+//--------------------------------------------------------------------------------
+//              Функция сравнения 2 массивов                                     +
+//--------------------------------------------------------------------------------
 bool Compare(byte *arr1,int size1, byte *arr2, int size2)
 {
 
@@ -77,7 +86,6 @@ bool Compare(byte *arr1,int size1, byte *arr2, int size2)
   {
       return false;
   }
-  
   return true;
 }
 
@@ -86,9 +94,12 @@ PDU reqPDU;
 
 void setup() {
   Serial.begin(9600);
-  uint8_t mac[6] = {0x00,0x01,0x02,0x03,0x04,0x05};
-  Ethernet.begin(mac,IPAddress(10,222,128,251));
+ 
+
+  Ethernet.begin(mac,ip);
+
   RequestDallas18b20();
+
   int success = udp.begin(161);
     Serial.print(F("initialize: "));
     Serial.println(success ? "success" : "failed");
@@ -106,7 +117,7 @@ void loop() {
    if (millis() - prevMillis > 60000)// Код выполняется раз в минуту
    { 
       prevMillis = millis();
-      if(tick>4294961294)tick=256;//Обнуляем счетчик значением больше 255 чтобы не было сбоя.
+      if(tick>4294960000)tick=256;//Обнуляем счетчик значением больше 255 чтобы не было сбоя.
       tick += 6000;
       RequestDallas18b20(); //Опрос датчика температуры Dallas18b20
    }
@@ -179,12 +190,15 @@ void loop() {
         tickHEX[0] =  tick >> 24;     
             //Serial.print(tick);Serial.print(" ");Serial.print(tickHEX[0],HEX);Serial.print(" ");Serial.print(tickHEX[1],HEX);Serial.print(" ");Serial.print(tickHEX[2],HEX);Serial.print(" ");Serial.println(tickHEX[3],HEX);
 
-// посчитаем сумму оида чтобы разделить одно от другуго
         int hash=0;
-        for(int i=0; i<reqPDU.size_of_oid; i++)
-        {
-          hash=hash+(int)reqPDU.oid[i];
-        }
+
+// Тут определим какой оид запрашивает клиент, сравнив его с образцами 4 констант sysDesc_OID, sysUptime_OID, sysName_OID, sysTempC_OID
+
+        if(Compare(reqPDU.oid,reqPDU.size_of_oid,sysDesc_OID,sizeof(sysDesc_OID))==true)hash=55;
+        if(Compare(reqPDU.oid,reqPDU.size_of_oid,sysUptime_OID,sizeof(sysUptime_OID))==true)hash=57;
+        if(Compare(reqPDU.oid,reqPDU.size_of_oid,sysName_OID,sizeof(sysName_OID))==true)hash=59;
+        if(Compare(reqPDU.oid,reqPDU.size_of_oid,sysTempC_OID,sizeof(sysTempC_OID))==true)hash=357;
+
 // в зависимости от того какой оид выставим размер данных для расчетов размеров блоков данных, если они будут неверные блок будет ошибочный
         switch (hash) {
         case 55: // оид 1.3.6.1.2.1.1.1.0
@@ -261,6 +275,8 @@ void loop() {
     //      далее в буфер записываются данные в зависимости от оида
     //      *******************************************************
         if(Compare(reqPDU.community,reqPDU.size_of_community,community,sizeof(community))!=true)udp.stop();
+
+
         switch (hash) 
         {
           case 55:// оид 1.3.6.1.2.1.1.1.0
