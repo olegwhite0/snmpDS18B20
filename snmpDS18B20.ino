@@ -10,7 +10,10 @@
 //1.3.6.1.2.1.1.5.0 sysDescription
 //1.3.6.1.4.1.49701.1.1.0 Temperature in celsius
 
-const byte desc[]={0x57,0x68,0x69,0x74,0x65,0x2d,0x44,0x53,0x32,0x53,0x4e,0x4d,0x50};//1.3.6.1.2.1.1.1.0: "White-DS2SNMP"
+const byte sysDesc[]={'W','h','i','t','e','-','D','S','2','S','N','M','P'};//1.3.6.1.2.1.1.1.0: "White-DS2SNMP"
+const byte sysName[]={'W','h','i','t','e','-','D','S','2','S','N','M','P'};//1.3.6.1.2.1.1.1.0: "White-DS2SNMP"
+
+const byte community[]={'p','u','b','l','i','c'};//1.3.6.1.2.1.1.1.0: "White-DS2SNMP"
 // Кодировка оида замороченная, поэтому я просто вписал данные с wireshark
 unsigned long tick;//1.3.6.1.2.1.1.3.0: 42000
 byte tickHEX[4] = {0x00,0x00,0x00,0x00};//Это значение аптайма в варианте 4 байтов
@@ -63,9 +66,24 @@ unsigned long timing=0;
   sensors.requestTemperatures();
 }
 
+bool Compare(byte *arr1,int size1, byte *arr2, int size2)
+{
+
+  if(size1==size2)
+  {
+      for(int i=0;i<size2;i++)if(arr2[i]!=arr1[i])return false;
+  }
+  else
+  {
+      return false;
+  }
+  
+  return true;
+}
 
 
-  PDU reqPDU;
+PDU reqPDU;
+
 void setup() {
   Serial.begin(9600);
   uint8_t mac[6] = {0x00,0x01,0x02,0x03,0x04,0x05};
@@ -170,7 +188,7 @@ void loop() {
 // в зависимости от того какой оид выставим размер данных для расчетов размеров блоков данных, если они будут неверные блок будет ошибочный
         switch (hash) {
         case 55: // оид 1.3.6.1.2.1.1.1.0
-            datablock_size=sizeof(desc);
+            datablock_size=sizeof(sysDesc);
         break;
         case 57: // оид 1.3.6.1.2.1.1.3.0
                 if (tick<=65535)
@@ -181,7 +199,7 @@ void loop() {
                     }
         break;
         case 59: // оид 1.3.6.1.2.1.1.5.0
-            datablock_size=sizeof(desc);
+            datablock_size=sizeof(sysName);
         break;
         case 357: // оид 1.3.6.1.4.1.49701.1.1.0
             datablock_size=6;//sizeof(celsius_octet) тут должен быть но результат всегда одного размера 6 байт
@@ -242,13 +260,13 @@ void loop() {
 
     //      далее в буфер записываются данные в зависимости от оида
     //      *******************************************************
-    
+        if(Compare(reqPDU.community,reqPDU.size_of_community,community,sizeof(community))!=true)udp.stop();
         switch (hash) 
         {
           case 55:// оид 1.3.6.1.2.1.1.1.0
                 full_block[iterator_writer]={0x04};iterator_writer++;
                 full_block[iterator_writer]=(byte)datablock_size;iterator_writer++;
-                for(int i=iterator_writer; i<iterator_writer+datablock_size; i++){full_block[i]=desc[i-iterator_writer];}iterator_writer=iterator_writer+datablock_size;
+                for(int i=iterator_writer; i<iterator_writer+datablock_size; i++){full_block[i]=sysName[i-iterator_writer];}iterator_writer=iterator_writer+datablock_size;
                 //Serial.println("<><><><><>");for(int i=iterator_writer; i<iterator_writer+datablock_size; i++){Serial.print(full_block[i],HEX);Serial.print(" ");}Serial.println(" ");
             break;
             case 57:// оид 1.3.6.1.2.1.1.3.0
@@ -277,7 +295,7 @@ void loop() {
             case 59:// оид 1.3.6.1.2.1.1.5.0
                 full_block[iterator_writer]={0x04};iterator_writer++;
                 full_block[iterator_writer]=(byte)datablock_size;iterator_writer++;
-                for(int i=iterator_writer; i<iterator_writer+datablock_size; i++){full_block[i]=desc[i-iterator_writer];}iterator_writer=iterator_writer+datablock_size;
+                for(int i=iterator_writer; i<iterator_writer+datablock_size; i++){full_block[i]=sysDesc[i-iterator_writer];}iterator_writer=iterator_writer+datablock_size;
             break;
             case 357:// оид 11.3.6.1.4.1.49701.1.1.0
                 full_block[iterator_writer]={0x04};iterator_writer++;
